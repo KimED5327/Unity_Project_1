@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class PlayerMove : MonoBehaviour
 {
@@ -14,6 +13,7 @@ public class PlayerMove : MonoBehaviour
 
     // 카메라 오프셋
     Vector3 offset;
+    [SerializeField] Vector2 margin = new Vector2(0.12f, 0.12f);
 
     [SerializeField] float intervalSpace = 0.25f;
 
@@ -34,24 +34,54 @@ public class PlayerMove : MonoBehaviour
     void Update()
     {
         MoveControl();
+        MoveAtMousePos();
     }
-
 
     void MoveControl()
     {
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
 
-        Vector3 dir = Vector3.right * h + Vector3.up * v;
+        Vector3 dir = new Vector3(h, v, 0f);
         dir = dir.normalized;
+        transform.position += dir * speed * Time.deltaTime;
 
-        Vector3 movePosition = transform.position + dir * speed * Time.deltaTime;
+        //ClampInScreen();
+        ViewportInScreen();
+    }
+
+    void ClampInScreen()
+    {
+        Vector3 myPos = transform.position;
         float spaceWidth = playerHalfWidth + intervalSpace;
         float spaceHeight = playerHalfHeight + intervalSpace;
-        movePosition.Set(Mathf.Clamp(movePosition.x, -camWidth + offset.x + spaceWidth, camWidth + offset.x - spaceWidth),
-                         Mathf.Clamp(movePosition.y, -camHeight + offset.y + spaceHeight, camHeight + offset.y - spaceHeight),
-                         0f);
+        float minWidth = -camWidth + offset.x + spaceWidth;
+        float maxWidth = camWidth + offset.x - spaceWidth;
+        float minHeight = -camHeight + offset.y + spaceHeight;
+        float maxHeight = camHeight + offset.y - spaceHeight;
+        myPos.Set(Mathf.Clamp(myPos.x, minWidth, maxWidth),
+                  Mathf.Clamp(myPos.y, minHeight, maxHeight),
+                  0f);
 
-        transform.position = movePosition;
+        transform.position = myPos;
+    }
+
+    void ViewportInScreen()
+    {
+        Vector3 myPos = Camera.main.WorldToViewportPoint(transform.position);
+        myPos.x = Mathf.Clamp(myPos.x, 0f + margin.x, 1f - margin.x);
+        myPos.y = Mathf.Clamp(myPos.y, 0f + margin.y, 1f - margin.y);
+        transform.position = Camera.main.ViewportToWorldPoint(myPos);
+    }
+    
+    void MoveAtMousePos()
+    {
+        if (Input.GetMouseButton(0))
+        {
+            Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            mouseWorldPos.z = 0;
+
+            transform.position = mouseWorldPos;
+        }
     }
 }
